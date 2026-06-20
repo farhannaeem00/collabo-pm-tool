@@ -18,8 +18,17 @@ const io = new Server(server, {
   },
 });
 
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
-app.use(express.json());
+app.use(cors({
+  origin: [
+    process.env.CLIENT_URL,
+    "https://collabo-pm-tool.vercel.app",
+    "http://localhost:3000"
+  ],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
+app.options("*", cors());
 
 // Routes
 app.use("/api/auth", require("./routes/authRoutes"));
