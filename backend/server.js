@@ -20,6 +20,34 @@ dotenv.config();
 connectDB();
 
 const app = express();
+// Handle CORS manually
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    "https://collabo-pm-tool.vercel.app",
+    "http://localhost:3000"
+  ];
+  
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+  
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Max-Age", "86400");
+
+  // Handle preflight
+  if (req.method === "OPTIONS") {
+    res.status(200).end();
+    return;
+  }
+  
+  next();
+});
+
+// Remove or comment out your existing cors() middleware
+// app.use(cors(...)); // DELETE THIS LINE
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -29,17 +57,6 @@ const io = new Server(server, {
   },
 });
 
-app.use(cors({
-  origin: [
-    process.env.CLIENT_URL,
-    "https://collabo-pm-tool.vercel.app",
-    "http://localhost:3000"
-  ],
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-}));
-app.options("*", cors());
 
 // Routes
 app.use("/api/auth", require("./routes/authRoutes"));
