@@ -1,63 +1,55 @@
 const express = require("express");
 const dotenv = require("dotenv");
-const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
 const connectDB = require("./config/db");
-
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "https://collabo-pm-tool.vercel.app");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.header("Access-Control-Allow-Credentials", "true");
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-  next();
-});
 
 dotenv.config();
 connectDB();
 
 const app = express();
-// Handle CORS manually
-app.use((req, res, next) => {
-  const allowedOrigins = [
-    "https://collabo-pm-tool.vercel.app",
-    "http://localhost:3000"
-  ];
-  
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  }
-  
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader("Access-Control-Max-Age", "86400");
 
-  // Handle preflight
-  if (req.method === "OPTIONS") {
-    res.status(200).end();
-    return;
-  }
-  
-  next();
+// Body parser
+app.use(express.json());
+
+// Routes
+app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/workspaces", require("./routes/workspaceRoutes"));
+app.use("/api/projects", require("./routes/projectRoutes"));
+app.use("/api/tasks", require("./routes/taskRoutes"));
+
+app.get("/", (req, res) => {
+  res.json({ status: "Collabo API Running ✅" });
 });
 
-// Remove or comment out your existing cors() middleware
-// app.use(cors(...)); // DELETE THIS LINE
 const server = http.createServer(app);
 
+// Socket.io
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL,
+    origin: "https://collabo-pm-tool.vercel.app",
     methods: ["GET", "POST"],
   },
 });
 
+io.on("connection", (socket) => {
+  console.log(`User connected: ${socket.id}`);
+  socket.on("join-project", (projectId) => socket.join(projectId));
+  socket.on("task-updated", (data) => socket.to(data.projectId).emit("task-updated", data));
+  socket.on("task-created", (data) => socket.to(data.projectId).emit("task-created", data));
+  socket.on("task-deleted", (data) => socket.to(data.projectId).emit("task-deleted", data));
+  socket.on("task-moved", (data) => socket.to(data.projectId).emit("task-moved", data));
+  socket.on("disconnect", () => console.log(`User disconnected: ${socket.id}`));
+});
 
+app.set("io", io);
+
+const PORT = process.env.PORT || 5000;
+if (process.env.NODE_ENV !== "production") {
+  server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
+
+module.exports = app;
 // Routes
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/workspaces", require("./routes/workspaceRoutes"));
