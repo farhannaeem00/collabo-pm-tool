@@ -5,6 +5,17 @@ const http = require("http");
 const { Server } = require("socket.io");
 const connectDB = require("./config/db");
 
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "https://collabo-pm-tool.vercel.app");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+  next();
+});
+
 dotenv.config();
 connectDB();
 
